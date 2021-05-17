@@ -7,7 +7,7 @@ import pathlib
 from ..utils import load_json
 
 class SMessage(object):
-    def __init__(self, selector, sock, addr):
+    def __init__(self, selector, sock, addr, query_file=None):
         self.selector = selector
         self.sock = sock
         self.addr = addr
@@ -17,7 +17,10 @@ class SMessage(object):
         self.jsonheader = None
         self.request = None
         self.response_created = False
-        self._request_file = os.path.join(pathlib.Path(__file__).parent.absolute(),  "_request.json")
+        if query_file:
+            self._request_file = query_file
+        else:
+            self._request_file = os.path.join(pathlib.Path(__file__).parent.absolute(),  "_request.json")
         self.request_search = load_json(self._request_file)
 
     def _set_selector_events_mask(self, mode):

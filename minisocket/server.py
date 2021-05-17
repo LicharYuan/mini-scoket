@@ -7,6 +7,7 @@ from .utils import append_to_txt, save_json, load_json
 from collections import defaultdict
 import random
 from tabulate import tabulate
+# import tempfile
 
 ## add for demo 
 def fake_time(net):
@@ -24,12 +25,13 @@ class Server(object):
     
     demo mode: show the case in tutorial
     """
-    def __init__(self, host, port, save=True, demo=False, msg=SMessage):
+    def __init__(self, host, port, save=True, demo=False, msg=SMessage, query_file=None):
         super().__init__()
         self.host = host
         self.port = port
-        self.save = save
+        self.save = False
         self.msg_func = msg
+        self._query_file = query_file
         self._demo = demo
         self._cget_times = defaultdict(int)
         self._cput_times = defaultdict(int)
@@ -42,16 +44,19 @@ class Server(object):
         self.sock.listen()
         self.sock.setblocking(False)
         self.sel.register(self.sock, selectors.EVENT_READ, data=None)
-        if save:
-            self._prefix = os.path.join("./_recv", time.strftime('%Y%m%d%H%M')+f"_P{port}")
-        
+        if save is True:
+            self._prefix = "./_recv"
+            self.save = True
+        elif isinstance(save, str):
+            self._prefix = save
+            self.save = True
 
     def accept_wrapper(self, accpet_sock):
         conn, addr = accpet_sock.accept()  
         print("accepted connection from", addr)
         self._ccon_times[addr[0]] += 1
         conn.setblocking(False) 
-        message = self.msg_func(self.sel, conn, addr)
+        message = self.msg_func(self.sel, conn, addr, self._query_file)
         self.sel.register(conn, selectors.EVENT_READ, data=message)
     
     def run(self):
@@ -98,7 +103,7 @@ class Server(object):
             print(type(content), request_type)
             str_content = content.decode("utf-8")
             val_content = str_content.split(">>")[-1][1:]
-            self._filename = (self._prefix + "IP" + str(message.accept_ip) + ".txt")
+            self._filename = (self._prefix + str(message.accept_ip) + ".txt")
             # only return string  type data
             append_to_txt(self._filename, val_content) # 
             print(f"message append to {self._filename}") 
