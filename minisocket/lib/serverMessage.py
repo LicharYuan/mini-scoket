@@ -92,7 +92,9 @@ class SMessage(object):
         action = self.request.get("action")
         if action == "search":
             query = self.request.get("value")
+            print(query, "debug")
             answer = self.request_search.get(query) or f'No match for "{query}".'
+            # No match means 404 status
             content = {"result": answer}
         else:
             content = {"result": f'Error: invalid action "{action}".'}
@@ -222,7 +224,7 @@ class SMessage(object):
         self._send_buffer += message
 
     @property
-    def accept_ip(self):
+    def connect_ip(self):
         return self.addr[0]
 
     @property

@@ -25,13 +25,19 @@ class Server(object):
     
     demo mode: show the case in tutorial
     """
-    def __init__(self, host, port, save=True, demo=False, msg=SMessage, query_file=None):
+    def __init__(self, host, port, 
+                 save=True, 
+                 demo=False, 
+                 msg=SMessage, 
+                 query_file=None, 
+                 ip_filter=None):
         super().__init__()
         self.host = host
         self.port = port
         self.save = False
         self.msg_func = msg
         self._query_file = query_file
+        self._ip_filter = ip_filter
         self._demo = demo
         self._cget_times = defaultdict(int)
         self._cput_times = defaultdict(int)
@@ -45,19 +51,32 @@ class Server(object):
         self.sock.setblocking(False)
         self.sel.register(self.sock, selectors.EVENT_READ, data=None)
         if save is True:
-            self._prefix = "./_recv"
+            self._prefix = "./_recv_"
             self.save = True
         elif isinstance(save, str):
             self._prefix = save
             self.save = True
 
+    def __repr__(self):
+        repr = f"Server(host={self.host}," \
+             + f"port={self.port}," \
+             + f"save={self.save}," \
+             + f"demo={self._demo}," \
+             + f"query_file={self._query_file}," \
+             + f"ip_filter={self._ip_filter})" 
+        return repr
+
     def accept_wrapper(self, accpet_sock):
-        conn, addr = accpet_sock.accept()  
+        conn, addr = accpet_sock.accept()   
         print("accepted connection from", addr)
-        self._ccon_times[addr[0]] += 1
-        conn.setblocking(False) 
-        message = self.msg_func(self.sel, conn, addr, self._query_file)
-        self.sel.register(conn, selectors.EVENT_READ, data=message)
+        if self._ip_filter is not None and addr[0] not in self._ip_filter:
+            print("Not White List connections")
+        else:
+            self._ccon_times[addr[0]] += 1
+            conn.setblocking(False) 
+            message = self.msg_func(self.sel, conn, addr, self._query_file)
+            self.sel.register(conn, selectors.EVENT_READ, data=message)
+
     
     def run(self):
         try:
@@ -74,9 +93,9 @@ class Server(object):
                             if self.save and mask==1:
                                 self.save_events(message)
                                 if message.stat == "get":
-                                    self._cget_times[message.accept_ip] += 1
+                                    self._cget_times[message.connect_ip] += 1
                                 elif message.stat == "put":
-                                    self._cput_times[message.accept_ip] += 1
+                                    self._cput_times[message.connect_ip] += 1
                                 else:
                                     raise TypeError(message.stat)
                         except Exception:
@@ -89,12 +108,10 @@ class Server(object):
         except KeyboardInterrupt:
             print("caught keyboard interrupt, exiting server")
         finally:
-            self.sel.close()
-            print("\n---- Count Connection ---")
-            self.display()
-
+            self.call_after_run()
 
     def save_events(self, message):
+        # case for latency and network
         try:
             content = message.request
             request_type = message.jsonheader.get("content-type")
@@ -102,8 +119,9 @@ class Server(object):
                 raise NotImplementedError("Json is not support to save")
             print(type(content), request_type)
             str_content = content.decode("utf-8")
-            val_content = str_content.split(">>")[-1][1:]
-            self._filename = (self._prefix + str(message.accept_ip) + ".txt")
+            val_content = str_content.split(">>")[-1].strip()
+            print(val_content, type(val_content), eval(val_content))
+            self._filename = (self._prefix + str(message.connect_ip) + ".txt")
             # only return string  type data
             append_to_txt(self._filename, val_content) # 
             print(f"message append to {self._filename}") 
@@ -135,6 +153,11 @@ class Server(object):
     @property
     def latest_save_file(self):
         return self._filename
+
+    def call_after_run(self):
+        self.sel.close()
+        print("\n---- Count Connection ---")
+        self.display()
 
 class MidServer(Server):
     def __init__(self, host, port, save=True, demo=False, msg=MidSMessage):
