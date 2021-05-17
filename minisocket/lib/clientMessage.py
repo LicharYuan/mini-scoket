@@ -3,6 +3,7 @@ import selectors
 import json
 import io
 import struct
+from minisocket.utils import get_ip
 
 class CMessage:
     def __init__(self, selector, sock, addr, request, quiet=False):
@@ -69,14 +70,16 @@ class CMessage:
     def _create_message(
         self, *, content_bytes, content_type, content_encoding
     ):
+        # encodoer message
         jsonheader = {
-            "byteorder": sys.byteorder,
+            "byteorder": sys.byteorder, 
             "content-type": content_type,
             "content-encoding": content_encoding,
             "content-length": len(content_bytes),
         }
         jsonheader_bytes = self._json_encode(jsonheader, "utf-8")
-        message_hdr = struct.pack(">H", len(jsonheader_bytes))
+        # >: big-en 
+        message_hdr = struct.pack(">H", len(jsonheader_bytes)) # denote the lens
         message = message_hdr + jsonheader_bytes + content_bytes
         return message
 
@@ -218,3 +221,4 @@ class CMessage:
             self._process_response_binary_content()
         # Close when response has been processed
         self.close()
+

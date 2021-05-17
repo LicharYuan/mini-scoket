@@ -102,9 +102,10 @@ class SMessage(object):
         return response
 
     def _create_response_binary_content(self):
+        # send recv msg to client
         response = {
-            "content_bytes": b"First 10 bytes of request: "
-            + self.request[:10],
+            "content_bytes": b"recev request: "
+            + self.request,
             "content_type": "binary/custom-server-binary-type",
             "content_encoding": "binary",
         }
@@ -193,6 +194,7 @@ class SMessage(object):
         if self.jsonheader["content-type"] == "text/json":
             encoding = self.jsonheader["content-encoding"]
             self.request = self._json_decode(data, encoding)
+            self._stat = "get"
             print("received request", repr(self.request), "from", self.addr)
         else:
             # Binary or unknown content-type
@@ -202,10 +204,10 @@ class SMessage(object):
                 self.addr,
             )
             print("  content:  ", self.request)
+            self._stat = "put"
 
         # Set selector to listen for write events, we're done reading.
         self._set_selector_events_mask("w")
-
     def create_response(self):
         if self.jsonheader["content-type"] == "text/json":
             response = self._create_response_json_content()
@@ -223,13 +225,17 @@ class SMessage(object):
     @property
     def request_file(self):
         return self._request_file
+    
+    @property
+    def stat(self):
+        return self._stat
 
 
 class MidSMessage(SMessage):
     # set _stat to waiting
     @property
     def _match(self):
-        if self._stat == "send":
+        if self._stat == "get":
             query = query = self.request.get("value")
             answer = self.request_search.get(query)
             return answer or False
@@ -248,26 +254,3 @@ class MidSMessage(SMessage):
                 self.write()
                 # wating hang client
 
-    def process_request(self):
-        content_len = self.jsonheader["content-length"]
-        if not len(self._recv_buffer) >= content_len:
-            return
-        data = self._recv_buffer[:content_len]
-        self._recv_buffer = self._recv_buffer[content_len:]
-        if self.jsonheader["content-type"] == "text/json":
-            encoding = self.jsonheader["content-encoding"]
-            self.request = self._json_decode(data, encoding)
-            self._stat = "send"
-            print("received request", repr(self.request), "from", self.addr)
-        else:
-            # Binary or unknown content-type
-            self.request = data
-            print(
-                f'received {self.jsonheader["content-type"]} request from',
-                self.addr,
-            )
-            print("  content:  ", self.request)
-            self._stat = "recv"
-
-        # Set selector to listen for write events, we're done reading.
-        self._set_selector_events_mask("w")

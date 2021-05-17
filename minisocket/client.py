@@ -3,10 +3,10 @@ import sys
 import socket
 import selectors
 import traceback
-from .lib import ClientMessage
+from .lib import CMessage
 
 class Client(object):
-    def __init__(self, host, port, action, value):
+    def __init__(self, host, port, action, value, msg=CMessage):
         super().__init__()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sel = selectors.DefaultSelector()
@@ -14,16 +14,20 @@ class Client(object):
         self.port = port
         self.action = action
         self.value = value
+        self.msg_func = msg
 
     def create_request(self, action, value):
         if action == "search":
+            # GET 
             return dict(
                 type="text/json",
                 encoding="utf-8",
                 content=dict(action=action, value=value),
             )
         else:
-            content = f"{action} >> {value}"
+            # POST
+            content = f"{action} >> {value}" 
+            # encoder action to content
             return dict(
                 type="binary/custom-client-binary-type",
                 encoding="binary",
@@ -36,7 +40,7 @@ class Client(object):
         addr = (host, port)
         self.sock.connect_ex(addr)
         events = selectors.EVENT_READ | selectors.EVENT_WRITE 
-        message = ClientMessage(self.sel, self.sock, addr, request)
+        message = self.msg_func(self.sel, self.sock, addr, request)
         self.sel.register(self.sock, events, data=message)
 
     def run(self):

@@ -98,6 +98,16 @@ for i, net in enumerate(net_list):
             net["tlats"] = float(lat)
             break
 ```
+
+## changelog
+
+v0.0.1: 目前 demo  使用的版本, 也是detsearch 中使用的版本. <br>
+client使用 search 来获取信息, 其他关键字来传输信息.
+
+v0.0.2: 
+
+
+
    
 ## TODO
 

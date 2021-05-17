@@ -4,7 +4,10 @@ from .lib import SMessage, MidSMessage
 import traceback
 import time, os
 from .utils import append_to_txt, save_json, load_json
+from collections import defaultdict
 import random
+from tabulate import tabulate
+
 ## add for demo 
 def fake_time(net):
     return random.randint(1,100)
@@ -21,12 +24,17 @@ class Server(object):
     
     demo mode: show the case in tutorial
     """
-    def __init__(self, host, port, save=True, demo=False):
+    def __init__(self, host, port, save=True, demo=False, msg=SMessage):
         super().__init__()
         self.host = host
         self.port = port
         self.save = save
+        self.msg_func = msg
         self._demo = demo
+        self._cget_times = defaultdict(int)
+        self._cput_times = defaultdict(int)
+        self._ccon_times = defaultdict(int)
+
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sel  = selectors.DefaultSelector()
 
@@ -36,13 +44,14 @@ class Server(object):
         self.sel.register(self.sock, selectors.EVENT_READ, data=None)
         if save:
             self._prefix = os.path.join("./_recv", time.strftime('%Y%m%d%H%M')+f"_P{port}")
+        
 
     def accept_wrapper(self, accpet_sock):
         conn, addr = accpet_sock.accept()  
         print("accepted connection from", addr)
+        self._ccon_times[addr[0]] += 1
         conn.setblocking(False) 
-        print(addr[0] )
-        message = SMessage(self.sel, conn, addr)
+        message = self.msg_func(self.sel, conn, addr)
         self.sel.register(conn, selectors.EVENT_READ, data=message)
     
     def run(self):
@@ -59,6 +68,12 @@ class Server(object):
                             message.process_events(mask)
                             if self.save and mask==1:
                                 self.save_events(message)
+                                if message.stat == "get":
+                                    self._cget_times[message.accept_ip] += 1
+                                elif message.stat == "put":
+                                    self._cput_times[message.accept_ip] += 1
+                                else:
+                                    raise TypeError(message.stat)
                         except Exception:
                             print(
                                 "main: error: exception for",
@@ -70,6 +85,9 @@ class Server(object):
             print("caught keyboard interrupt, exiting server")
         finally:
             self.sel.close()
+            print("\n---- Count Connection ---")
+            self.display()
+
 
     def save_events(self, message):
         try:
@@ -96,7 +114,15 @@ class Server(object):
             print("Save failed, Only save recv data from client")
         finally:
             print("Exit saving message")
-    
+
+    def display(self):
+        header = ["ip", "Query Times", "Put Times", "Connect Times"]
+        msg = []
+        for ip, time in self._ccon_times.items():
+            msg.append([ip, self._cget_times[ip], self._cput_times[ip], self._ccon_times[ip]])
+        table = tabulate(msg, header, tablefmt="grid")
+        print(table)
+        
     @property
     def prefix(self):
         return self._prefix
@@ -106,14 +132,9 @@ class Server(object):
         return self._filename
 
 class MidServer(Server):
-    def accept_wrapper(self, accpet_sock):
-        conn, addr = accpet_sock.accept()  
-        print("accepted connection from", addr)
-        conn.setblocking(False) 
-        print(addr[0] )
-        message = MidSMessage(self.sel, conn, addr)
-        self.sel.register(conn, selectors.EVENT_READ, data=message)
-    
+    def __init__(self, host, port, save=True, demo=False, msg=MidSMessage):
+        super().__init__(host, port, save=save, demo=demo, msg=msg)
+
     def save_events(self, message):
         # alway flush request file
         try:
