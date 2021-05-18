@@ -30,10 +30,12 @@ class Server(object):
                  demo=False, 
                  msg=SMessage, 
                  query_file=None, 
-                 ip_filter=None):
+                 ip_filter=None,
+                 logger=None):
         super().__init__()
         self.host = host
         self.port = port
+        self.logger = logger if logger else print
         self.save = False
         self.msg_func = msg
         self._query_file = query_file
@@ -68,15 +70,14 @@ class Server(object):
 
     def accept_wrapper(self, accpet_sock):
         conn, addr = accpet_sock.accept()   
-        print("accepted connection from", addr)
+        self.logger("accepted connection from", addr)
         if self._ip_filter is not None and addr[0] not in self._ip_filter:
-            print("Not White List connections")
+            self.logger("Not White List connections")
         else:
             self._ccon_times[addr[0]] += 1
             conn.setblocking(False) 
-            message = self.msg_func(self.sel, conn, addr, self._query_file)
+            message = self.msg_func(self.sel, conn, addr, self._query_file, self.logger)
             self.sel.register(conn, selectors.EVENT_READ, data=message)
-
     
     def run(self):
         try:
@@ -90,7 +91,7 @@ class Server(object):
                         message = key.data
                         try:
                             message.process_events(mask)
-                            if self.save and mask==1:
+                            if self.save and mask==2:
                                 self.save_events(message)
                                 if message.stat == "get":
                                     self._cget_times[message.connect_ip] += 1
@@ -99,14 +100,14 @@ class Server(object):
                                 else:
                                     raise TypeError(message.stat)
                         except Exception:
-                            print(
+                            self.logger(
                                 "main: error: exception for",
                                 f"{message.addr}:\n{traceback.format_exc()}",
                             )
                             message.close()
 
         except KeyboardInterrupt:
-            print("caught keyboard interrupt, exiting server")
+            self.logger("caught keyboard interrupt, exiting server")
         finally:
             self.call_after_run()
 
@@ -117,26 +118,26 @@ class Server(object):
             request_type = message.jsonheader.get("content-type")
             if "json" in request_type:
                 raise NotImplementedError("Json is not support to save")
-            print(type(content), request_type)
+            self.logger(type(content), request_type)
             str_content = content.decode("utf-8")
             val_content = str_content.split(">>")[-1].strip()
-            print(val_content, type(val_content), eval(val_content))
+            self.logger(val_content, type(val_content), eval(val_content))
             self._filename = (self._prefix + str(message.connect_ip) + ".txt")
             # only return string  type data
             append_to_txt(self._filename, val_content) # 
-            print(f"message append to {self._filename}") 
+            self.logger(f"message append to {self._filename}") 
             if self._demo:
                 # cal latency
                 latency = fake_time(val_content)
                 all_request = load_json(message.request_file)
                 all_request.update({val_content: latency})
-                print(" \n recv new net latency, updating request file")
+                self.logger(" \n recv new net latency, updating request file")
                 save_json(message.request_file, all_request)
                 
         except NotImplementedError:
-            print("Save failed, Only save recv data from client")
+            self.logger("Save failed, Only save recv data from client")
         finally:
-            print("Exit saving message")
+            self.logger("Exit saving message")
 
     def display(self):
         header = ["ip", "Query Times", "Put Times", "Connect Times"]
@@ -144,7 +145,7 @@ class Server(object):
         for ip, time in self._ccon_times.items():
             msg.append([ip, self._cget_times[ip], self._cput_times[ip], self._ccon_times[ip]])
         table = tabulate(msg, header, tablefmt="grid")
-        print(table)
+        self.logger("\n", table)
         
     @property
     def prefix(self):
@@ -156,7 +157,7 @@ class Server(object):
 
     def call_after_run(self):
         self.sel.close()
-        print("\n---- Count Connection ---")
+        self.logger("\n ---- Count Connection ---\n")
         self.display()
 
 class MidServer(Server):

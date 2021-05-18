@@ -4,10 +4,10 @@ import io, os
 import sys
 import struct
 import pathlib
-from ..utils import load_json
+from ..utils import load_json, Logger 
 
 class SMessage(object):
-    def __init__(self, selector, sock, addr, query_file=None):
+    def __init__(self, selector, sock, addr, query_file=None, logger=None):
         self.selector = selector
         self.sock = sock
         self.addr = addr
@@ -17,6 +17,7 @@ class SMessage(object):
         self.jsonheader = None
         self.request = None
         self.response_created = False
+        self.logger = logger if logger else print
         if query_file:
             self._request_file = query_file
         else:
@@ -50,7 +51,7 @@ class SMessage(object):
 
     def _write(self):
         if self._send_buffer:
-            print("sending", repr(self._send_buffer), "to", self.addr)
+            self.logger("sending", repr(self._send_buffer), "to", self.addr)
             try:
                 # Should be ready to write
                 sent = self.sock.send(self._send_buffer)
@@ -92,7 +93,6 @@ class SMessage(object):
         action = self.request.get("action")
         if action == "search":
             query = self.request.get("value")
-            print(query, "debug")
             answer = self.request_search.get(query) or f'No match for "{query}".'
             # No match means 404 status
             content = {"result": answer}
@@ -146,11 +146,11 @@ class SMessage(object):
         self._write()
 
     def close(self):
-        print("closing connection to", self.addr)
+        self.logger("closing connection to", self.addr)
         try:
             self.selector.unregister(self.sock)
         except Exception as e:
-            print(
+            self.logger(
                 "error: selector.unregister() exception for",
                 f"{self.addr}: {repr(e)}",
             )
@@ -158,7 +158,7 @@ class SMessage(object):
         try:
             self.sock.close()
         except OSError as e:
-            print(
+            self.logger(
                 "error: socket.close() exception for",
                 f"{self.addr}: {repr(e)}",
             )
@@ -200,15 +200,15 @@ class SMessage(object):
             encoding = self.jsonheader["content-encoding"]
             self.request = self._json_decode(data, encoding)
             self._stat = "get"
-            print("received request", repr(self.request), "from", self.addr)
+            self.logger("received request", repr(self.request), "from", self.addr)
         else:
             # Binary or unknown content-type
             self.request = data
-            print(
+            self.logger(
                 f'received {self.jsonheader["content-type"]} request from',
                 self.addr,
             )
-            print("  content:  ", self.request)
+            self.logger("  content:  ", self.request)
             self._stat = "put"
 
         # Set selector to listen for write events, we're done reading.
