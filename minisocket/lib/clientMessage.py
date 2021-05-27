@@ -28,7 +28,7 @@ class CMessage:
         elif mode == "rw":
             events = selectors.EVENT_READ | selectors.EVENT_WRITE
         else:
-            raise ValueError(f"Invalid events mask mode {repr(mode)}.")
+            raise ValueError("Invalid events mask mode {}.".format(repr(mode)))
         self.selector.modify(self.sock, events, data=self)
 
     def _read(self):
@@ -87,7 +87,7 @@ class CMessage:
         content = self.response
         result = content.get("result")
         self._request_result = result
-        print(f"got result: {result}")
+        print("got result: {}".format(result))
 
     @property
     def request_result(self):
@@ -95,7 +95,7 @@ class CMessage:
 
     def _process_response_binary_content(self):
         content = self.response
-        print(f"got response: {repr(content)}")
+        print("got response: {}".format(repr(content)))
 
     def process_events(self, mask):
         if mask & selectors.EVENT_READ:
@@ -135,7 +135,7 @@ class CMessage:
         except Exception as e:
             print(
                 "error: selector.unregister() exception for",
-                f"{self.addr}: {repr(e)}",
+                "{}: {}".format(self.addr, repr(e)),
             )
 
         try:
@@ -143,7 +143,7 @@ class CMessage:
         except OSError as e:
             print(
                 "error: socket.close() exception for",
-                f"{self.addr}: {repr(e)}",
+                "{}: {}".format(self.addr, repr(e)),
             )
         finally:
             # Delete reference to socket object for garbage collection
@@ -198,7 +198,7 @@ class CMessage:
                 "content-encoding",
             ):
                 if reqhdr not in self.jsonheader:
-                    raise ValueError(f'Missing required header "{reqhdr}".')
+                    raise ValueError('Missing required header "{}".'.format(reqhdr))
 
     def process_response(self):
         content_len = self.jsonheader["content-length"]
@@ -215,7 +215,7 @@ class CMessage:
             # Binary or unknown content-type
             self.response = data
             print(
-                f'received {self.jsonheader["content-type"]} response from',
+                'received {} response from'.format(self.jsonheader["content-type"]),
                 self.addr,
             )
             self._process_response_binary_content()

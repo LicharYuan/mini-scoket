@@ -60,12 +60,12 @@ class Server(object):
             self.save = True
 
     def __repr__(self):
-        repr = f"Server(host={self.host}," \
-             + f"port={self.port}," \
-             + f"save={self.save}," \
-             + f"demo={self._demo}," \
-             + f"query_file={self._query_file}," \
-             + f"ip_filter={self._ip_filter})" 
+        repr = "Server(host={self.host},".format(self.host) \
+             + "port={},".format(self.port) \
+             + "save={},".format(self.save) \
+             + "demo={},".format(self._demo) \
+             + "query_file={},".format(self._query_file) \
+             + "ip_filter={})".format(self._ip_filter) 
         return repr
 
     def accept_wrapper(self, accpet_sock):
@@ -102,7 +102,7 @@ class Server(object):
                         except Exception:
                             self.logger(
                                 "main: error: exception for",
-                                f"{message.addr}:\n{traceback.format_exc()}",
+                                "{}:\n{}".format(message.addr, traceback.format_exc()),
                             )
                             message.close()
 
@@ -125,7 +125,7 @@ class Server(object):
             self._filename = (self._prefix + str(message.connect_ip) + ".txt")
             # only return string  type data
             append_to_txt(self._filename, val_content) # 
-            self.logger(f"message append to {self._filename}") 
+            self.logger("message append to {}".format(self._filename)) 
             if self._demo:
                 # cal latency
                 latency = fake_time(val_content)

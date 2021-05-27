@@ -26,7 +26,7 @@ class Client(object):
             )
         else:
             # POST
-            content = f"{action} >> {value}" 
+            content = "{} >> {}".format(action, value)
             # encoder action to content
             return dict(
                 type="binary/custom-client-binary-type",
@@ -56,7 +56,7 @@ class Client(object):
                     except Exception:
                         print(
                             "main: error: exception for",
-                            f"{message.addr}:\n{traceback.format_exc()}",
+                            "{}:\n{}".format(message.addr, traceback.format_exc()),
                         )
                         message.close()
                 # check socket being monitored to continue
