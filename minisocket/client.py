@@ -15,6 +15,7 @@ class Client(object):
         self.action = action
         self.value = value
         self.msg_func = msg
+        self._connect = "UNKONW" 
 
     def create_request(self, action, value):
         if action == "search":
@@ -53,12 +54,14 @@ class Client(object):
                     try:
                         message.process_events(mask)
                         self._recv_info = message.request_result
+                        self._connect = True
                     except Exception:
                         print(
                             "main: error: exception for",
                             "{}:\n{}".format(message.addr, traceback.format_exc()),
                         )
                         message.close()
+                        self._connect = False
                 # check socket being monitored to continue
                 if not self.sel.get_map():
                     break
@@ -67,6 +70,9 @@ class Client(object):
         finally:
             self.sel.close()
     
+    @property
+    def is_connect(self):
+        return self._connect
 
     @property
     def recv_info(self):
