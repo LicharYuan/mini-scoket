@@ -16,6 +16,7 @@ class Client(object):
         self.value = value
         self.msg_func = msg
         self._connect = "UNKONW" 
+        self._recv_info = None
 
     def create_request(self, action, value):
         if action == "search":
@@ -60,13 +61,14 @@ class Client(object):
                             "main: error: exception for",
                             "{}:\n{}".format(message.addr, traceback.format_exc()),
                         )
-                        message.close()
                         self._connect = False
+                        message.close()
                 # check socket being monitored to continue
                 if not self.sel.get_map():
                     break
         except KeyboardInterrupt:
             print("caught keyboard interrupt, exiting client")
+            exit("Interrupt by user")
         finally:
             self.sel.close()
     
