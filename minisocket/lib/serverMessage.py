@@ -90,6 +90,7 @@ class SMessage(object):
         return message
 
     def _create_response_json_content(self):
+        # create response search 
         action = self.request.get("action")
         if action == "search":
             query = self.request.get("value")
@@ -234,7 +235,6 @@ class SMessage(object):
     @property
     def stat(self):
         return self._stat
-
 
 class MidSMessage(SMessage):
     # set _stat to waiting

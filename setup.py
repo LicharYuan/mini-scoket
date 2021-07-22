@@ -1,9 +1,11 @@
 """simple set up"""
-
+# encoding:utf-8
 import setuptools
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+
+#with open("README.md", "r") as fh:
+#    long_description = fh.read()
+long_description = " " 
 
 
 def get_install_requires():
