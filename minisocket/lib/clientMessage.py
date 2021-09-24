@@ -6,10 +6,11 @@ import struct
 from minisocket.utils import get_ip
 
 class CMessage:
-    def __init__(self, selector, sock, addr, request, quiet=False):
+    def __init__(self, selector, sock, addr, request, verbose=True):
         self.selector = selector
         self.sock = sock
         self.addr = addr
+        self.verbose = verbose
         self.request = request
         self._recv_buffer = b""
         self._send_buffer = b""
@@ -46,7 +47,10 @@ class CMessage:
 
     def _write(self):
         if self._send_buffer:
-            print("sending", repr(self._send_buffer), "to", self.addr)
+            if self.verbose:
+                print("sending", repr(self._send_buffer), "to", self.addr)
+            else:
+                print("Sending...")
             try:
                 # Should be ready to write
                 sent = self.sock.send(self._send_buffer)
@@ -87,7 +91,10 @@ class CMessage:
         content = self.response
         result = content.get("result")
         self._request_result = result
-        print("got result: {}".format(result))
+        if self.verbose:
+            print("got result: {}".format(result))
+        else:
+            print("Gotta :)")
 
     @property
     def request_result(self):
@@ -209,15 +216,17 @@ class CMessage:
         if self.jsonheader["content-type"] == "text/json":
             encoding = self.jsonheader["content-encoding"]
             self.response = self._json_decode(data, encoding)
-            print("received response", repr(self.response), "from", self.addr)
+            if self.verbose:
+                print("received response", repr(self.response), "from", self.addr)
             self._process_response_json_content()
         else:
             # Binary or unknown content-type
             self.response = data
-            print(
-                'received {} response from'.format(self.jsonheader["content-type"]),
-                self.addr,
-            )
+            if self.verbose:
+                print(
+                    'received {} response from'.format(self.jsonheader["content-type"]),
+                    self.addr,
+                )
             self._process_response_binary_content()
         # Close when response has been processed
         self.close()

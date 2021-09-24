@@ -6,7 +6,7 @@ import traceback
 from .lib import CMessage
 
 class Client(object):
-    def __init__(self, host, port, action, value, msg=CMessage):
+    def __init__(self, host, port, action, value, msg=CMessage, verbose=True):
         super().__init__()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sel = selectors.DefaultSelector()
