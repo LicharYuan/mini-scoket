@@ -17,6 +17,7 @@ class Client(object):
         self.msg_func = msg
         self._connect = "UNKONW" 
         self._recv_info = None
+        self.verbose = verbose
 
     def create_request(self, action, value):
         if action == "search":
@@ -42,7 +43,7 @@ class Client(object):
         addr = (host, port)
         self.sock.connect_ex(addr)
         events = selectors.EVENT_READ | selectors.EVENT_WRITE 
-        message = self.msg_func(self.sel, self.sock, addr, request)
+        message = self.msg_func(self.sel, self.sock, addr, request, self.verbose)
         self.sel.register(self.sock, events, data=message)
 
     def run(self):
@@ -57,10 +58,11 @@ class Client(object):
                         self._recv_info = message.request_result
                         self._connect = True
                     except Exception:
-                        print(
-                            "main: error: exception for",
-                            "{}:\n{}".format(message.addr, traceback.format_exc()),
-                        )
+                        if self.verbose:
+                            print(
+                                "main: error: exception for",
+                                "{}:\n{}".format(message.addr, traceback.format_exc()),
+                            )
                         self._connect = False
                         message.close()
                 # check socket being monitored to continue

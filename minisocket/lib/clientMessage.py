@@ -48,9 +48,10 @@ class CMessage:
     def _write(self):
         if self._send_buffer:
             if self.verbose:
-                print("sending", repr(self._send_buffer), "to", self.addr)
+                print("Sending", repr(self._send_buffer), "to", self.addr)
             else:
                 print("Sending...")
+
             try:
                 # Should be ready to write
                 sent = self.sock.send(self._send_buffer)
@@ -102,7 +103,8 @@ class CMessage:
 
     def _process_response_binary_content(self):
         content = self.response
-        print("got response: {}".format(repr(content)))
+        if self.verbose:
+            print("Got response: {}".format(repr(content)))
 
     def process_events(self, mask):
         if mask & selectors.EVENT_READ:
@@ -148,6 +150,7 @@ class CMessage:
         try:
             self.sock.close()
         except OSError as e:
+            
             print(
                 "error: socket.close() exception for",
                 "{}: {}".format(self.addr, repr(e)),
